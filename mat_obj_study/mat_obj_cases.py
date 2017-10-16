@@ -33,17 +33,21 @@ def make_dict_return_dict():
         None.
 
     Returns:
-        mat: Dictionary of (material number: (data dictionaries)).
+        mat: Dictionary of (material number: (data dictionary)).
     """
     mat = {}
     for mat_num in mat_num_list:
+        # Defining as dictionaries.
         act = {}
         nonact = {}
+        # Processing as dictionaries.
         for idx, zaid in enumerate(sorted(zaid_act), start=1):
             act[zaid] = float(idx)
         for idx, zaid in enumerate(sorted(zaid_nonact), start=len(zaid_act)+1):
             nonact[zaid] = float(idx)
-        mat[mat_num] = (act, nonact)
+        # Returning as dictionaries.
+        mat[mat_num] = {'actinide': act,
+                        'nonactinide': nonact}
 
     return mat
 
@@ -58,18 +62,21 @@ def make_dict_return_obj():
         None.
 
     Returns:
-        mat: Dictionary of (material number: Material object).
+        mat: Dictionary of (material number: (data dictionary)).
     """
     mat = {}
     for mat_num in mat_num_list:
+        # Defining as dictionaries.
         act = {}
         nonact = {}
+        # Processing as dictionaries.
         for idx, zaid in enumerate(sorted(zaid_act), start=1):
             act[str(zaid)+'0000'] = idx
         for idx, zaid in enumerate(sorted(zaid_nonact), start=len(zaid_act)+1):
             nonact[str(zaid)+'0000'] = idx
-        mat[mat_num] = Material(act) + Material(nonact)
-        mat[mat_num].metadata['mat_number'] = mat_num
+        # Returning as PyNE material objects made with dictionaries.
+        mat[mat_num] = {'actinide': Material(act),
+                        'nonactinide': Material(nonact)}
 
     return mat
 
@@ -84,18 +91,23 @@ def make_empty_obj_return_obj():
         None.
 
     Returns:
-        mat: Dictionary of (material number: Material object).
+        mat: Dictionary of (material number: (data dictionary)).
     """
     mat = {}
     for mat_num in mat_num_list:
+        # Defining as PyNE material objects.
+        # No initialization.
         act = Material()
         nonact = Material()
+        # Processing as PyNE material objects - adding key-value pair.
+        # Size of material object increases.
         for idx, zaid in enumerate(sorted(zaid_act), start=1):
             act[str(zaid)+'0000'] = idx
         for idx, zaid in enumerate(sorted(zaid_nonact), start=len(zaid_act)+1):
             nonact[str(zaid)+'0000'] = idx
-        mat[mat_num] = act + nonact
-        mat[mat_num].metadata['mat_number'] = mat_num
+        # Returning as PyNE material objects.
+        mat[mat_num] = {'actinide': act,
+                        'nonactinide': nonact}
 
     return mat
 
@@ -109,35 +121,41 @@ def make_filled_obj_return_obj():
         None.
 
     Returns:
-        mat: Dictionary of (material number: Material object).
+        mat: Dictionary of (material number: (data dictionary)).
     """
     mat = {}
 
-    empty_act = {}
-    empty_nonact = {}
+    draft_act = {}
+    draft_nonact = {}
     for zaid in zaid_act:
-        empty_act[str(zaid)+'0000'] = 0.0
+        draft_act[str(zaid)+'0000'] = 0.0
     for zaid in zaid_nonact:
-        empty_nonact[str(zaid)+'0000'] = 0.0
+        draft_nonact[str(zaid)+'0000'] = 0.0
 
     for mat_num in mat_num_list:
-        act = Material(empty_act)
-        nonact = Material(empty_nonact)
+        # Initialized as PyNE material objects with draft dictionaries.
+        act = Material(draft_act)
+        nonact = Material(draft_nonact)
+        # Processing as PyNE material objects - re-assigning value.
+        # Size of material object remains unchanged.
         for idx, zaid in enumerate(sorted(zaid_act), start=1):
             act[str(zaid)+'0000'] = idx
         for idx, zaid in enumerate(sorted(zaid_nonact), start=len(zaid_act)+1):
             nonact[str(zaid)+'0000'] = idx
-        mat[mat_num] = act + nonact
-        mat[mat_num].metadata['mat_number'] = mat_num
+        # Returning as PyNE material objects.
+        mat[mat_num] = {'actinide': act,
+                        'nonactinide': nonact}
 
     return mat
 
 
 def write_dict(mat):
-    """Write string with dicionary key, values
+    """Write string with dicionary key, values.
+
+    Note: Normalization is unabled with this method.
 
     Arguments:
-        mat: Data container with dictionaries as values.
+        mat: Dictionary of (material number: (data dictionary)).
 
     Returns:
         inp: String to be written.
@@ -146,25 +164,31 @@ def write_dict(mat):
     inp = ''
     for mat_num in sorted(mat):
         inp += 'm{0}\n'.format(mat_num)
-        (act, nonact) = mat[mat_num]
-        for zaid, frac in sorted(nonact.items()):
+        series_mat = mat[mat_num]
+        for zaid, frac in sorted(series_mat['nonactinide'].items()):
             inp += '     {0:<5} -{1:.3e}\n'.format(zaid, frac)
-        for zaid, frac in sorted(act.items()):
+        for zaid, frac in sorted(series_mat['actinide'].items()):
             inp += '     {0:<5} -{1:.3e}\n'.format(zaid, frac)
     return inp
+
 
 def write_obj(mat):
     """Write string with Material objects.
 
+    Using .mcnp() method, compositions will be automatically normalized.
+
     Arguments:
-        mat: Data container with Material objects as values.
+        mat: Dictionary of (material number: (data dictionary)).
 
     Returns:
         inp: String to be written.
     """
     inp = ''
     for mat_num in sorted(mat):
-        inp += mat[mat_num].mcnp()
+        # Add two material objects to use .mcnp() method once.
+        mat_obj = mat[mat_num]['actinide'] + mat[mat_num]['nonactinide']
+        mat_obj.metadata['mat_number'] = mat_num
+        inp += mat_obj.mcnp()
     return inp
 
 
@@ -173,9 +197,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test timing for \
 material object utilization")
     parser.add_argument("case", type=str, choices=['dict_dict',
-                                                        'dict_obj',
-                                                        'empty_obj',
-                                                        'filled_obj'],
+                                                   'dict_obj',
+                                                   'empty_obj',
+                                                   'filled_obj'],
                         help="Cases to be compared.")
     parser.add_argument("-n", "--num_mat", type=int, default=1500,
                         help="Number of materials to be made. \
