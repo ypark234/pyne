@@ -52,14 +52,14 @@ workflows:
   build_and_test:
     jobs:
       - build_py2:
-        filters:
-          branches:
-            only:
-              - develop
-              - pymoab_cleanup
+          filters:
+            branches:
+              only:
+                - develop
+                - pymoab_cleanup
       - build_py3
-        filters:
-          branches:
-            only:
-              - develop
-              - pymoab_cleanup
+          filters:
+            branches:
+              only:
+                - develop
+                - pymoab_cleanup
