@@ -57,7 +57,7 @@ workflows:
               only:
                 - develop
                 - pymoab_cleanup
-      - build_py3
+      - build_py3:
           filters:
             branches:
               only:
